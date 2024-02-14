@@ -2,18 +2,18 @@ import server from "./server";
 import { useState } from "react";
 
 function Wallet({ address, setAddress, balance, setBalance }) {
-const [privateKey, setPrivateKey] = useState("");
-const [hashedMessage, setHashedMessage] = useState("");
-const [signature, setSignature] = useState("");
-const [recoveryBit, setRecoveryBit] = useState("");
-
+  const [privateKey, setPrivateKey] = useState("");
+  const [hashedMessage, setHashedMessage] = useState("");
+  const [signature, setSignature] = useState("");
+  const [recoveryBit, setRecoveryBit] = useState("");
 
   async function onChange(evt) {
+
     const newaddress = evt.target.value;
     setAddress(newaddress);
     if (newaddress) {
       const {
-        data: { balance , privateKey, hashedMessage,signature,recoveryBit},
+        data: { balance, privateKey, hashedMessage, signature, recoveryBit },
       } = await server.get(`balance/${newaddress}`);
       setBalance(balance);
       setPrivateKey(privateKey);

@@ -1,5 +1,5 @@
 import { keccak256 } from "ethereum-cryptography/keccak.js";
-import { toHex, utf8ToBytes } from "ethereum-cryptography/utils.js";
+import { hexToBytes, toHex, utf8ToBytes } from "ethereum-cryptography/utils.js";
 
 import { secp256k1 } from 'ethereum-cryptography/secp256k1';
 import { useState } from 'react';
@@ -7,54 +7,53 @@ import server from './server';
 
 
 
-async function hashAndSign({ address, privateKey, setHashedMessage, setSignature, setRecoveryBit, sendAmount, recipient }) 
-{ 
+async function hashAndSign({ address, privateKey, setHashedMessage, setSignature, setRecoveryBit, sendAmount, recipient }) {
   try {
+    const privateKeyBytes = hexToBytes(privateKey);
     const transactionMessage = {
       sender: address,
       amount: parseInt(sendAmount),
-      recipient: recipient
+      recipient: recipient,
     };
     const hashedMessage = keccak256(utf8ToBytes(JSON.stringify(transactionMessage)));
     const hexMessage = toHex(hashedMessage);
 
     setHashedMessage(hexMessage);
-    const signatureArray = secp256k1.sign(hexMessage, privateKey, { recovered: true });
-    const signature = toHex(signatureArray[0]);
+    const signatureObj= secp256k1.sign(hexMessage, privateKeyBytes);
+    const signature = toHex(signatureObj.r)+toHex(signatureObj.s);
     setSignature(signature);
-    const recoveryBit = signatureArray[1];
+    const recoveryBit = signatureObj.recovery;
     setRecoveryBit(recoveryBit);
-  } 
+  }
   catch (error) {
-    console.error("Error in hashAndSign", error); 
+    console.error("Error in hashAndSign", error);
+  }
 }
-}
-function Transfer({ address, setBalance }) 
-{
+function Transfer({ address, setBalance,privateKey }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [hashedMessage, setHashedMessage] = useState(""); 
-  const [signature, setSignature] = useState(""); 
+  const [hashedMessage, setHashedMessage] = useState("");
+  const [signature, setSignature] = useState("");
   const [recoveryBit, setRecoveryBit] = useState("");
-
+const privateKeyBytes = hexToBytes(privateKey);
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
   async function transfer(evt) {
     evt.preventDefault();
 
     try {
-      await hashAndSign({ address, privateKey, setHashedMessage, setSignature, setRecoveryBit, sendAmount, recipient });
-      const response = await server.post(`send`,{
-      
+      await hashAndSign({ address, privateKeyBytes, setHashedMessage, setSignature, setRecoveryBit, sendAmount, recipient });
+      const response = await server.post(`send`, {
+
         sender: address,
         amount: parseInt(sendAmount),
         recipient,
         signature,
         recoveryBit,
-        hexMessage : hashedMessage,
+        hexMessage: hashedMessage,
       });
       const balance = response?.data?.balance;
-      if(balance !==undefined) {
+      if (balance !== undefined) {
         setBalance(balance);
       }
       else {
@@ -63,14 +62,15 @@ function Transfer({ address, setBalance })
 
     } catch (ex) {
       console.error("Error in transfer", ex);
-      if(ex?.response){
+      if (ex?.response) {
         console.error("server error:", ex.response.data.message);
       }
       else {
 
-        console.error("unexpected error:", ex.message);
+        console.error("fix the error:", ex.message);
       }
     }
+
   }
 
   return (
